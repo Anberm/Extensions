@@ -14,7 +14,7 @@ using Microsoft.JSInterop.Internal;
 namespace Microsoft.JSInterop
 {
     /// <summary>
-    /// Delegate that defines what to do with exceptions produced by dotnet interop calls.
+    /// Delegate that defines what object to pass to javascript when a .NET interop exception occurs.
     /// </summary>
     /// <param name="exception">The exception thrown by the dotnet method invocation.</param>
     /// <param name="assemblyName">The assembly name the method belongs to.</param>
