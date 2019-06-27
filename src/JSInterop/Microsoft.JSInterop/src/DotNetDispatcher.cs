@@ -14,6 +14,15 @@ using Microsoft.JSInterop.Internal;
 namespace Microsoft.JSInterop
 {
     /// <summary>
+    /// Delegate that defines what to do with exceptions produced by dotnet interop calls.
+    /// </summary>
+    /// <param name="exception">The exception thrown by the dotnet method invocation.</param>
+    /// <param name="assemblyName">The assembly name the method belongs to.</param>
+    /// <param name="methodName">The identifier within the assembly for the method.</param>
+    /// <returns>The error object to be serialized and returned to the client.</returns>
+    public delegate object DotNetInvocationExceptionHandler(Exception exception, string assemblyName, string methodName);
+
+    /// <summary>
     /// Provides methods that receive incoming calls from JS to .NET.
     /// </summary>
     public static class DotNetDispatcher
@@ -23,19 +32,39 @@ namespace Microsoft.JSInterop
         private static readonly ConcurrentDictionary<AssemblyKey, IReadOnlyDictionary<string, (MethodInfo, Type[])>> _cachedMethodsByAssembly
             = new ConcurrentDictionary<AssemblyKey, IReadOnlyDictionary<string, (MethodInfo, Type[])>>();
 
-        /// <summary>
-        /// An event that gets fired when an exception invoking a .NET method happens.
-        /// </summary>
-        public static event DotNetInvocationException OnDotNetInvocationException;
+        private static DotNetInvocationExceptionHandler _onDotNetInvocationException;
 
         /// <summary>
-        /// Delegate that defines what to do with exceptions produced by dotnet interop calls.
+        /// Gets or sets the <see cref="JSInterop.DotNetInvocationExceptionHandler"/> used to
+        /// sanitize exceptions before sending them to the client.
         /// </summary>
-        /// <param name="exception">The exception thrown by the dotnet method invocation.</param>
-        /// <param name="assemblyName">The assembly name the method belongs to.</param>
-        /// <param name="methodName">The identifier within the assembly for the method.</param>
-        /// <returns>The error object to be serialized and returned to the client.</returns>
-        public delegate object DotNetInvocationException(Exception exception, string assemblyName, string methodName);
+        /// <remarks>
+        /// This property is considered part of the JSInterop infrastructure and should not be set
+        /// by anything else than the platform. Otherwise the behavior is undefined and considered
+        /// unsupported.
+        /// </remarks>
+        public static DotNetInvocationExceptionHandler DotNetInvocationExceptionHandler
+        {
+            get
+            {
+                return _onDotNetInvocationException;
+            }
+            set
+            {
+                if (_onDotNetInvocationException != null)
+                {
+                    throw new InvalidOperationException("Platform already initialized.");
+                }
+
+                _onDotNetInvocationException = value;
+            }
+        }
+
+        // For tests purposes only;
+        internal static void ResetDotNetInvocationExceptionHandler()
+        {
+            _onDotNetInvocationException = null;
+        }
 
         /// <summary>
         /// Receives a call from JS to .NET, locating and invoking the specified method.
@@ -119,13 +148,13 @@ namespace Microsoft.JSInterop
                 jsRuntimeBaseInstance.EndInvokeDotNet(
                     callId,
                     false,
-                    OnDotNetInvocationException?.Invoke(syncException.SourceException, assemblyName, methodIdentifier) ?? syncException);
+                    DotNetInvocationExceptionHandler?.Invoke(syncException.SourceException, assemblyName, methodIdentifier) ?? syncException);
             }
             else if (syncResult is Task task)
             {
                 // Returned a task - we need to continue that task and then report an exception
                 // or return the value.
-                task.ContinueWith(t =>
+                task.ContinueWith((Action<Task>)(t =>
                 {
                     if (t.Exception != null)
                     {
@@ -133,12 +162,12 @@ namespace Microsoft.JSInterop
                         jsRuntimeBaseInstance.EndInvokeDotNet(
                             callId,
                             false,
-                            OnDotNetInvocationException?.Invoke(exception, assemblyName, methodIdentifier) ?? ExceptionDispatchInfo.Capture(exception));
+                            DotNetInvocationExceptionHandler?.Invoke(exception, assemblyName, methodIdentifier) ?? ExceptionDispatchInfo.Capture(exception));
                     }
 
                     var result = TaskGenericsUtil.GetTaskResult(task);
                     jsRuntimeBaseInstance.EndInvokeDotNet(callId, true, result);
-                }, TaskScheduler.Current);
+                }), TaskScheduler.Current);
             }
             else
             {

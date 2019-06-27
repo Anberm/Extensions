@@ -350,8 +350,8 @@ namespace Microsoft.JSInterop.Tests
                 "display more detailed information about the error that occurred.";
 
             static object OnDotNetInvocationError(Exception ex, string assembly, string method) => new JSError { Message = GetMessage(assembly, method) };
-            DotNetDispatcher.OnDotNetInvocationException += OnDotNetInvocationError;
-            using var @finally = new Finally(() => DotNetDispatcher.OnDotNetInvocationException -= OnDotNetInvocationError);
+            DotNetDispatcher.DotNetInvocationExceptionHandler += OnDotNetInvocationError;
+            using var @finally = new Finally(() => DotNetDispatcher.ResetDotNetInvocationExceptionHandler());
 
             // Act
             var callId = "123";
@@ -403,8 +403,8 @@ namespace Microsoft.JSInterop.Tests
                 "display more detailed information about the error that occurred.";
 
             static object OnDotNetInvocationError(Exception ex, string assembly, string method) => new JSError { Message = GetMessage(assembly, method) };
-            DotNetDispatcher.OnDotNetInvocationException += OnDotNetInvocationError;
-            using var @finally = new Finally(() => DotNetDispatcher.OnDotNetInvocationException -= OnDotNetInvocationError);
+            DotNetDispatcher.DotNetInvocationExceptionHandler += OnDotNetInvocationError;
+            using var @finally = new Finally(() => DotNetDispatcher.ResetDotNetInvocationExceptionHandler());
 
             // Act
             var callId = "123";
