@@ -154,7 +154,7 @@ namespace Microsoft.JSInterop
             {
                 // Returned a task - we need to continue that task and then report an exception
                 // or return the value.
-                task.ContinueWith((Action<Task>)(t =>
+                task.ContinueWith(t =>
                 {
                     if (t.Exception != null)
                     {
@@ -167,7 +167,7 @@ namespace Microsoft.JSInterop
 
                     var result = TaskGenericsUtil.GetTaskResult(task);
                     jsRuntimeBaseInstance.EndInvokeDotNet(callId, true, result);
-                }), TaskScheduler.Current);
+                }, TaskScheduler.Current);
             }
             else
             {
