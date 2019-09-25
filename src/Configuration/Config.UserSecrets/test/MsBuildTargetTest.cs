@@ -42,7 +42,7 @@ namespace Microsoft.Extensions.Configuration.UserSecrets
 
         [Theory]
         [InlineData(".csproj", ".cs")]
-        [InlineData(".fsproj", ".fs")]
+        [InlineData(".fsproj", ".fs", Skip = "https://github.com/aspnet/AspNetCore/issues/13303")]
         public void GeneratesAssemblyAttributeFile(string projectExt, string sourceExt)
         {
             var testTfm = typeof(MsBuildTargetTest).Assembly
@@ -94,7 +94,7 @@ let main argv =
                     break;
             }
 
-            foreach (var file in new[] { Path.Join(_tempDir, "Directory.Build.props"), Path.Join(_tempDir, "Directory.Build.targets") })
+            foreach (var file in new[] { Path.Combine(_tempDir, "Directory.Build.props"), Path.Combine(_tempDir, "Directory.Build.targets") })
             {
                 if (!File.Exists(file))
                 {
